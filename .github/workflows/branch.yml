@@ -1,0 +1,192 @@
+name: Branch
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  actions: write
+  checks: write
+  contents: write
+  deployments: write
+  id-token: write
+  issues: write
+  discussions: write
+  packages: write
+  pages: write
+  pull-requests: write
+  repository-projects: write
+  security-events: write
+  statuses: write
+
+jobs:
+  # security:
+  #   name: Security
+  #   runs-on: namespace-profile-btp-portal
+  #   if: github.ref_name != 'main'
+  #   steps:
+  #     - name: Checkout
+  #       uses: namespacelabs/nscloud-checkout-action@v2
+  #       with:
+  #         fetch-depth: 0
+
+  #     - name: Detect new vulnerabilities
+  #       uses: AikidoSec/github-actions-workflow@v1.0.10
+  #       continue-on-error: true
+  #       with:
+  #         secret-key: ${{ secrets.AIKIDO_SECRET_KEY }}
+  #         fail-on-timeout: false
+  #         fail-on-dependency-scan: true
+  #         fail-on-sast-scan: true
+  #         fail-on-iac-scan: false
+  #         minimum-severity: 'CRITICAL'
+  #         timeout-seconds: 180
+  #         post-scan-status-comment: true
+  #         github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  #     - name: TruffleHog OSS
+  #       uses: trufflesecurity/trufflehog@v3.71.2
+  #       with:
+  #         extra_args: --only-verified
+
+  # test:
+  #   name: Test
+  #   runs-on: namespace-profile-btp-scs-portal
+  #   services:
+  #     db:
+  #       image: postgres:16-alpine
+  #       env:
+  #         POSTGRES_USER: portal
+  #         POSTGRES_PASSWORD: portal
+  #         POSTGRES_DB: portal
+  #       ports:
+  #         - "5432:5432"
+  #     redis:
+  #       image: redis:7-alpine
+  #       ports:
+  #         - "6379:6379"
+  #     foundry:
+  #       image: ghcr.io/settlemint/btp-anvil-test-node:latest
+  #       ports:
+  #         - "8545:8545"
+  #   steps:
+  #     - name: Checkout
+  #       uses: namespacelabs/nscloud-checkout-action@v3
+  #       with:
+  #         fetch-depth: 2
+
+  #     - name: Setup caches
+  #       uses: namespacelabs/nscloud-cache-action@v1
+  #       with:
+  #         path: |
+  #           ./node_modules
+
+  #     - name: Setup git user
+  #       run: |
+  #         git config --global user.name "$(git --no-pager log --format=format:'%an' -n 1)"
+  #         git config --global user.email "$(git --no-pager log --format=format:'%ae' -n 1)"
+
+  #     - name: Install Bun
+  #       uses: oven-sh/setup-bun@v1
+
+  #     - name: Install Foundry
+  #       uses: foundry-rs/foundry-toolchain@v1
+
+  #     - name: Install dependencies
+  #       run: bun install
+
+  #     - name: Codegen
+  #       run: bun codegen
+
+  #     - name: Test Setup
+  #       run: bun test:setup
+
+  #     - name: Deploy Smart Contract Sets
+  #       run: bun test:deploy-scs
+
+  #     - name: Test
+  #       run: bun test --coverage
+
+  build:
+    name: Build
+    # needs: test
+    runs-on: namespace-profile-eas-indexing-service
+    steps:
+      - name: Checkout
+        uses: namespacelabs/nscloud-checkout-action@v3
+        with:
+          fetch-depth: 2
+
+      - name: Setup caches
+        uses: namespacelabs/nscloud-cache-action@v1
+        with:
+          path: |
+            ./node_modules
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v1
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_PASS }}
+
+      - name: Install dependencies
+        run: |
+          bun install
+
+      - name: Codegen
+        run: bun codegen
+
+      - name: Lint
+        run: |
+          bun lint
+
+      - name: Check types
+        run: npx tsc
+
+      - name: Docker meta
+        if: github.event_name != 'pull_request'
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ghcr.io/settlemint/eas-indexing-service
+          tags: |
+            type=schedule
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
+
+      - name: Build and push
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
+          provenance: mode=max
+          sbom: true
