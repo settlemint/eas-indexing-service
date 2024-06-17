@@ -121,6 +121,9 @@ jobs:
     name: Build
     # needs: test
     runs-on: namespace-profile-eas-indexing-service
+    env:
+      INFURA_API_KEY: ${{ secrets.INFURA_API_KEY }}
+      CHAIN_ID: 11155111
     steps:
       - name: Checkout
         uses: namespacelabs/nscloud-checkout-action@v3
@@ -155,6 +158,10 @@ jobs:
       - name: Install dependencies
         run: |
           yarn install
+
+      - name: Generate prisma scheme
+        run: |
+          SKIP_PRISMA_VERSION_CHECK=true npx prisma generate
 
       - name: Docker meta
         if: github.event_name != 'pull_request'
