@@ -31,6 +31,7 @@ export type EASChainConfig = {
 };
 
 export const CHAIN_ID = Number(process.env.CHAIN_ID);
+export const RPC_PROVIDER = String(process.env.RPC_PROVIDER);
 
 if (!CHAIN_ID) {
   throw new Error("No chain ID specified");
@@ -232,6 +233,10 @@ const activeChainConfig = EAS_CHAIN_CONFIGS.find(
 
 if (!activeChainConfig) {
   throw new Error("No chain config found for chain ID");
+}
+
+if (RPC_PROVIDER) {
+  activeChainConfig.rpcProvider = RPC_PROVIDER;
 }
 
 export const EASContractAddress = activeChainConfig.contractAddress;
