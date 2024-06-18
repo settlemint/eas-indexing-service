@@ -14,8 +14,7 @@ COPY . .
 COPY entrypoint.sh /app/entrypoint.sh
 RUN apk update && apk add --no-cache postgresql-client
 RUN chmod +x /app/entrypoint.sh
-RUN chmod -R a+w /app
-
+RUN chmod -R 777 /app
 RUN yarn install
 ENTRYPOINT ["/app/entrypoint.sh"]
 EXPOSE 4000
