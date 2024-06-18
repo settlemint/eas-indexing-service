@@ -15,5 +15,6 @@ COPY entrypoint.sh /app/entrypoint.sh
 RUN apk update && apk add --no-cache postgresql-client
 RUN chmod +x /app/entrypoint.sh
 RUN yarn install
+RUN chown -R node:node /app/node_modules
 ENTRYPOINT ["/app/entrypoint.sh"]
 EXPOSE 4000
