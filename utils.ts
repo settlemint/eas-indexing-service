@@ -237,11 +237,11 @@ if (!activeChainConfig) {
   activeChainConfig = {
     chainId: CHAIN_ID,
     chainName: CHAIN_NAME || "unknown",
-    version: "1.3.0", // You can also make this configurable
+    version: "0.0.0",
     contractAddress: CONTRACT_ADDRESS || "",
     schemaRegistryAddress: SCHEMA_REGISTRY_ADDRESS || "",
-    etherscanURL: "https://etherscan.io", // You can also make this configurable
-    subdomain: "", // You can also make this configurable
+    etherscanURL: "https://etherscan.io",
+    subdomain: "",
     contractStartBlock: CONTRACT_START_BLOCK || 0,
     rpcProvider: RPC_PROVIDER || "",
   };
@@ -268,7 +268,7 @@ console.log("Active chain config", activeChainConfig);
 
 export const EASContractAddress = activeChainConfig.contractAddress;
 export const EASSchemaRegistryAddress = activeChainConfig.schemaRegistryAddress;
-export const EAScontractStartBlock= activeChainConfig.contractStartBlock;
+export const EAScontractStartBlock = activeChainConfig.contractStartBlock;
 export const revokedEventSignature = "Revoked(address,address,bytes32,bytes32)";
 export const revokedOffchainEventSignature =
   "RevokedOffchain(address,bytes32,uint64)";
