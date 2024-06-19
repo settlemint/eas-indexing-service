@@ -31,7 +31,11 @@ export type EASChainConfig = {
 };
 
 export const CHAIN_ID = Number(process.env.CHAIN_ID);
+export const CHAIN_NAME = String(process.env.CHAIN_NAME);
 export const RPC_PROVIDER = String(process.env.RPC_PROVIDER);
+export const CONTRACT_ADDRESS = String(process.env.CONTRACT_ADDRESS);
+export const SCHEMA_REGISTRY_ADDRESS = String(process.env.SCHEMA_REGISTRY_ADDRESS);
+export const CONTRACT_START_BLOCK = Number(process.env.CONTRACT_START_BLOCK);
 
 if (!CHAIN_ID) {
   throw new Error("No chain ID specified");
@@ -227,22 +231,44 @@ export const EAS_CHAIN_CONFIGS: EASChainConfig[] = [
   },
 ];
 
-const activeChainConfig = EAS_CHAIN_CONFIGS.find(
-  (config) => config.chainId === CHAIN_ID
-);
+let activeChainConfig = EAS_CHAIN_CONFIGS.find((config) => config.chainId === CHAIN_ID);
 
 if (!activeChainConfig) {
-  throw new Error("No chain config found for chain ID");
+  activeChainConfig = {
+    chainId: CHAIN_ID,
+    chainName: CHAIN_NAME || "unknown",
+    version: "1.3.0", // You can also make this configurable
+    contractAddress: CONTRACT_ADDRESS || "",
+    schemaRegistryAddress: SCHEMA_REGISTRY_ADDRESS || "",
+    etherscanURL: "https://etherscan.io", // You can also make this configurable
+    subdomain: "", // You can also make this configurable
+    contractStartBlock: CONTRACT_START_BLOCK || 0,
+    rpcProvider: RPC_PROVIDER || "",
+  };
+} else {
+  // If a CHAIN_ID is given that's in the list, overwrite values if they are given in the env
+  if (CHAIN_NAME) {
+    activeChainConfig.chainName = CHAIN_NAME;
+  }
+  if (RPC_PROVIDER) {
+    activeChainConfig.rpcProvider = RPC_PROVIDER;
+  }
+  if (CONTRACT_ADDRESS) {
+    activeChainConfig.contractAddress = CONTRACT_ADDRESS;
+  }
+  if (SCHEMA_REGISTRY_ADDRESS) {
+    activeChainConfig.schemaRegistryAddress = SCHEMA_REGISTRY_ADDRESS;
+  }
+  if (CONTRACT_START_BLOCK) {
+    activeChainConfig.contractStartBlock = CONTRACT_START_BLOCK;
+  }
 }
 
-if (RPC_PROVIDER) {
-  console.log("Using custom RPC provider", RPC_PROVIDER);
-  activeChainConfig.rpcProvider = RPC_PROVIDER;
-}
+console.log("Active chain config", activeChainConfig);
 
 export const EASContractAddress = activeChainConfig.contractAddress;
 export const EASSchemaRegistryAddress = activeChainConfig.schemaRegistryAddress;
-export const CONTRACT_START_BLOCK = activeChainConfig.contractStartBlock;
+export const EAScontractStartBlock= activeChainConfig.contractStartBlock;
 export const revokedEventSignature = "Revoked(address,address,bytes32,bytes32)";
 export const revokedOffchainEventSignature =
   "RevokedOffchain(address,bytes32,uint64)";
@@ -627,14 +653,14 @@ async function getStartData(serviceStatPropertyName: string) {
     where: { name: serviceStatPropertyName },
   });
 
-  let fromBlock: number = CONTRACT_START_BLOCK;
+  let fromBlock: number = EAScontractStartBlock;
 
   if (latestBlockNumServiceStat?.value) {
     fromBlock = Number(latestBlockNumServiceStat.value);
   }
 
   if (fromBlock === 0) {
-    fromBlock = CONTRACT_START_BLOCK;
+    fromBlock = EAScontractStartBlock;
   }
 
   return { latestBlockNumServiceStat, fromBlock };
