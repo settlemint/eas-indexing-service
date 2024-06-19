@@ -236,6 +236,7 @@ if (!activeChainConfig) {
 }
 
 if (RPC_PROVIDER) {
+  console.log("Using custom RPC provider", RPC_PROVIDER);
   activeChainConfig.rpcProvider = RPC_PROVIDER;
 }
 
