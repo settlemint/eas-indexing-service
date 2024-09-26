@@ -17,6 +17,9 @@ const requestDelay = process.env.REQUEST_DELAY
 
 const limit = pLimit(5);
 
+// Add a constant for maximum retries
+const MAX_RETRIES = 5;
+
 export type EASChainConfig = {
   chainId: number;
   chainName: string;
@@ -194,7 +197,7 @@ export const EAS_CHAIN_CONFIGS: EASChainConfig[] = [
     schemaRegistryAddress: "0xD2CDF46556543316e7D34e8eDc4624e2bB95e3B6",
     contractStartBlock: 1317850,
     etherscanURL: "https://scrollscan.com/",
-    rpcProvider: `https://rpc.scroll.io/`,
+    rpcProvider: `https://skilled-powerful-sailboat.scroll-mainnet.quiknode.pro/${process.env.SCROLL_QUICKNODE_API_KEY}/`,
   },
   {
     chainId: 534351,
@@ -332,6 +335,13 @@ export async function getFormattedAttestationFromLog(
   let tries = 1;
 
   do {
+    if (tries > MAX_RETRIES) {
+      console.log(
+        `Max retries reached for log ${log.transactionHash}. Skipping...`
+      );
+      return null; // Exit the loop and return null after max retries
+    }
+
     [
       UID,
       schemaUID,
@@ -401,6 +411,13 @@ export async function getFormattedSchemaFromLog(
   let tries = 1;
 
   do {
+    if (tries > MAX_RETRIES) {
+      console.log(
+        `Max retries reached for schema log ${log.transactionHash}. Skipping...`
+      );
+      throw new Error("Max retries reached while fetching schema.");
+    }
+
     [UID, resolver, revocable, schema] = await schemaContract.getSchema(
       log.topics[1]
     );
@@ -503,6 +520,8 @@ export async function createAttestationsForLogs(logs: ethers.providers.Log[]) {
         await prisma.attestation.create({ data: attestation });
         await processCreatedAttestation(attestation);
       }
+    } else {
+      console.log("Skipped creating attestation due to max retries.");
     }
   }
 }
@@ -639,7 +658,7 @@ export async function updateServiceStatToLastBlock(
       data: { name: serviceStatPropertyName, value: lastBlock.toString() },
     });
   } else {
-    if (lastBlock !== 0) {
+    if (lastBlock !== 0 && lastBlock > Number(existing.value)) {
       await prisma.serviceStat.update({
         where: { name: serviceStatPropertyName },
         data: { value: lastBlock.toString() },
@@ -753,4 +772,19 @@ export async function getAndUpdateAllRelevantLogs() {
   }
 
   console.log("total  logs", allLogs.length);
+}
+
+export async function updateDbFromEthTransaction(txId: string) {
+  const tx = await provider.getTransactionReceipt(txId);
+
+  if (!tx) {
+    console.log("Transaction not found", txId);
+    return;
+  }
+
+  for (const log of tx.logs) {
+    await updateDbFromRelevantLog(log);
+  }
+
+  console.log("Processed logs for tx", txId);
 }
