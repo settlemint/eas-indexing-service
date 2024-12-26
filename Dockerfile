@@ -16,5 +16,6 @@ RUN apk update && apk add --no-cache postgresql-client
 RUN chmod +x /app/entrypoint.sh
 RUN chmod -R 777 /app
 RUN yarn install
+RUN ln -s /usr/lib/libssl.so.3 /lib/libssl.so.3
 ENTRYPOINT ["/app/entrypoint.sh"]
 EXPOSE 4000
