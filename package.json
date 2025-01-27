@@ -19,7 +19,7 @@
     "dayjs": "1.11.13",
     "dotenv": "16.4.7",
     "ethers": "5.7.2",
-    "graphql": "16.10.0",
+    "graphql": "^15.3.0",
     "graphql-fields": "2.0.3",
     "p-limit": "6.2.0",
     "prisma": "6.2.1",
