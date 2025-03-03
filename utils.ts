@@ -1,11 +1,12 @@
-import { prisma } from "./db.server";
-import { ethers } from "ethers";
+import { SchemaEncoder } from "@ethereum-attestation-service/eas-sdk";
 import { Attestation, Schema } from "@prisma/client";
 import dayjs from "dayjs";
-import pLimit from "p-limit";
-import { Eas__factory, EasSchema__factory } from "./types/ethers-contracts";
-import { SchemaEncoder } from "@ethereum-attestation-service/eas-sdk";
+import { ethers } from "ethers";
 import * as fs from "fs";
+import pLimit from "p-limit";
+import superjson from 'superjson';
+import { prisma } from "./db.server";
+import { Eas__factory, EasSchema__factory } from "./types/ethers-contracts";
 
 const batchSize = process.env.BATCH_SIZE
   ? Number(process.env.BATCH_SIZE)
@@ -419,7 +420,7 @@ export async function getFormattedAttestationFromLog(
     }
 
     const schemaEncoder = new SchemaEncoder(schema.schema);
-    decodedDataJson = JSON.stringify(schemaEncoder.decodeData(data));
+    decodedDataJson = superjson.stringify(schemaEncoder.decodeData(data));
   } catch (error) {
     console.log("Error decoding data 53432", error);
   }
